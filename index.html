@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latihan Pengukuhan: Tatabahasa & Bina Ayat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn-option { transition: all 0.2s ease; }
+        .btn-option:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .btn-option.correct { background-color: #10B981; color: white; border-color: #10B981; }
+        .btn-option.wrong { background-color: #EF4444; color: white; border-color: #EF4444; animation: shake 0.4s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        
+        /* Overlay Style */
+        #name-overlay { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4 relative">
+
+    <!-- Admin Login Modal (Custom UI to replace native prompt) -->
+    <div id="admin-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm fade-in">
+        <div class="bg-white rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl transform transition-all">
+            <div class="text-4xl mb-3">🕵️‍♂️</div>
+            <h3 class="text-xl font-bold text-gray-900 mb-4">Super Admin</h3>
+            <input type="password" id="admin-pwd-input" class="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-center mb-4 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Kata Laluan" autocomplete="off">
+            <div class="flex gap-2">
+                <button id="btn-admin-cancel" class="flex-1 bg-gray-200 text-gray-700 p-3 rounded-xl font-medium hover:bg-gray-300 transition-all">Batal</button>
+                <button id="btn-admin-submit" class="flex-1 bg-purple-600 text-white p-3 rounded-xl font-medium hover:bg-purple-700 transition-all">Sahkan</button>
+            </div>
+            <p id="admin-error" class="text-red-500 text-sm mt-3 font-medium hidden">Kata laluan tidak sah!</p>
+        </div>
+    </div>
+
+    <!-- Modal Nama Pelajar -->
+    <div id="name-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center relative">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Selamat Datang!</h2>
+            <p class="text-gray-500 mb-6 text-sm">Sila masukkan nama penuh anda untuk pengesanan guru (direkodkan).</p>
+            <input type="text" id="student-name-input" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all mb-4" placeholder="Contoh: Ahmad Ali" autocomplete="off">
+            <button id="btn-start" class="w-full bg-blue-600 text-white px-8 py-4 rounded-xl font-medium opacity-50 cursor-not-allowed transition-all" disabled>Mula Latihan</button>
+            
+            <!-- Hidden Admin Trigger -->
+            <div class="absolute bottom-3 right-4">
+                <span id="admin-trigger" class="cursor-pointer opacity-40 hover:opacity-100 text-sm transition-opacity" title="Admin Login">🔒</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-3xl w-full">
+        <!-- Header & Progress -->
+        <div class="mb-8 fade-in">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Latihan Bahasa Melayu</h1>
+                    <p class="text-gray-500 mt-2 text-sm" id="section-title">Bahagian A: Tatabahasa</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Pelajar</span>
+                    <span id="display-student-name" class="font-medium text-blue-600">...</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between items-center mt-2 text-xs text-gray-500 font-medium relative">
+                <div class="flex items-center gap-3">
+                    <span id="question-counter">Soalan 1 / 60</span>
+                    <!-- Admin Bypass Button (Hidden by default) -->
+                    <button id="btn-admin-bypass" class="hidden bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-purple-300 hover:bg-purple-200 transition-colors shadow-sm">Skip >></button>
+                </div>
+                <span id="combo-counter" class="text-blue-600 font-bold hidden absolute right-0">🔥 3 Berturut-turut!</span>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div id="card-container" class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 md:p-12 fade-in min-h-[350px] flex flex-col justify-center relative">
+            
+            <!-- Question Content -->
+            <div id="question-area">
+                <h2 id="question-text" class="text-2xl font-semibold leading-relaxed mb-8">Loading...</h2>
+                
+                <!-- Options (Tatabahasa) -->
+                <div id="options-area" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Buttons injected via JS -->
+                </div>
+
+                <!-- Correction Area (Apabila salah Tatabahasa) -->
+                <div id="correction-area" class="hidden mt-6 bg-red-50 border border-red-100 rounded-xl p-6 fade-in">
+                    <p class="text-red-600 font-semibold mb-2">Kurang tepat!</p>
+                    <p class="text-gray-700 mb-4">Jawapan yang betul ialah: <span id="correct-answer-text" class="font-bold text-green-700 uppercase"></span></p>
+                    <p class="text-sm text-gray-500 mb-2 font-medium">Sila taip semula jawapan yang betul untuk meneruskan:</p>
+                    <input type="text" id="correction-input" class="w-full bg-white border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all" placeholder="Taip di sini..." autocomplete="off">
+                </div>
+
+                <!-- Textarea (Bina Ayat) -->
+                <div id="typing-area" class="hidden">
+                    <p class="text-sm text-gray-500 mb-3 font-medium uppercase tracking-wider">Tuliskan satu ayat lengkap:</p>
+                    <textarea id="answer-input" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none" rows="3" placeholder="Mula menaip di sini..."></textarea>
+                    <div class="flex justify-end mt-4">
+                        <button id="btn-next" class="bg-blue-600 text-white px-8 py-3 rounded-full font-medium opacity-50 cursor-not-allowed transition-all" disabled>Seterusnya</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completion Screen -->
+            <div id="completion-area" class="hidden text-center fade-in">
+                <div class="text-6xl mb-6">🎉</div>
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Tahniah, <span id="finish-student-name"></span>!</h2>
+                <p class="text-gray-600 mb-8">Anda telah melengkapkan 60 soalan latihan dengan cemerlang. Cikgu telah menerima rekod anda.</p>
+                <button onclick="location.reload()" class="bg-gray-900 text-white px-8 py-3 rounded-full font-medium hover:bg-gray-800 transition-all">Selesai</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI GOOGLE APPS SCRIPT ---
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2R3m8Z4kS1DAvzOKNCYQlixSTajG0WCdDeNzr1Iio3A6iQKsjcwDusW-LguFLAM-91w/exec'; 
+
+        // Data 60 Soalan
+        const questions = [
+            // --- BAHAGIAN A: TATABAHASA (1-30) ---
+            { q: "Saya tinggal ___ Kuala Lumpur.", opts: ["di", "ke", "dari", "daripada"], ans: 0 },
+            { q: "Bapa pergi ___ pejabat pada waktu pagi.", opts: ["di", "ke", "dari", "pada"], ans: 1 },
+            { q: "Surat ini ___ kawan saya di Jepun.", opts: ["ke", "dari", "daripada", "pada"], ans: 2 },
+            { q: "Pelancong itu berasal ___ negara Australia.", opts: ["di", "ke", "dari", "daripada"], ans: 2 },
+            { q: "Buku latihan itu ada ___ atas meja guru.", opts: ["di", "ke", "dari", "pada"], ans: 0 },
+            { q: "Saya bangun tidur ___ pukul 6.00 pagi setiap hari.", opts: ["di", "ke", "dari", "pada"], ans: 3 },
+            { q: "Ali sedang ___ buku cerita di perpustakaan.", opts: ["membaca", "menulis", "melukis", "mengira"], ans: 0 },
+            { q: "Ibu ___ nasi lemak yang sangat sedap.", opts: ["membasuh", "memasak", "menyapu", "memotong"], ans: 1 },
+            { q: "Kucing itu suka ___ ikan.", opts: ["minum", "makan", "main", "tidur"], ans: 1 },
+            { q: "Mereka ___ bola sepak di padang sekolah.", opts: ["berlari", "bermain", "berjalan", "berenang"], ans: 1 },
+            { q: "Kami suka ___ muzik pada masa lapang.", opts: ["melihat", "mendengar", "bercakap", "menyanyi"], ans: 1 },
+            { q: "Baju yang dibeli oleh kakak sangat ___.", opts: ["cantik", "laju", "tinggi", "bising"], ans: 0 },
+            { q: "Rumah baharu Ali sangat ___ dan selesa.", opts: ["kecil", "besar", "pantas", "lambat"], ans: 1 },
+            { q: "Hari ini cuaca sangat ___ kerana matahari terik.", opts: ["sejuk", "panas", "gelap", "hujan"], ans: 1 },
+            { q: "Makanan di restoran itu sangat ___.", opts: ["pahit", "masin", "sedap", "tawar"], ans: 2 },
+            { q: "Kereta sukan itu dipandu dengan sangat ___.", opts: ["laju", "perlahan", "kuat", "lemah"], ans: 0 },
+            { q: "Dia membeli se___ payung di kedai.", opts: ["buah", "batang", "kaki", "helai"], ans: 2 },
+            { q: "Ayah sedang membaca se___ surat khabar.", opts: ["naskhah", "keping", "biji", "patah"], ans: 0 },
+            { q: "Adik makan dua ___ roti untuk sarapan.", opts: ["biji", "keping", "potong", "helai"], ans: 1 },
+            { q: "Ada tiga puluh ___ pelajar di dalam kelas itu.", opts: ["ekor", "buah", "orang", "pasukan"], ans: 2 },
+            { q: "Ibu membeli lima ___ epal merah di pasar.", opts: ["biji", "buah", "ketul", "ikat"], ans: 0 },
+            { q: "Saya menulis menggunakan se___ pen biru.", opts: ["buah", "batang", "kaki", "bilah"], ans: 1 },
+            { q: "Dia memakai se___ kasut baharu.", opts: ["helai", "pasang", "buah", "biji"], ans: 1 },
+            { q: "Kucing itu berjaya menangkap se___ tikus.", opts: ["ekor", "orang", "biji", "keping"], ans: 0 },
+            { q: "Keluarga kami menyewa se___ kereta untuk bercuti.", opts: ["buah", "biji", "batang", "bentuk"], ans: 0 },
+            { q: "Abang ___ baju sebelum keluar rumah.", opts: ["membuka", "memakai", "mencuci", "menyimpan"], ans: 1 },
+            { q: "Cikgu Ahmad ___ mata pelajaran Matematik.", opts: ["belajar", "mengajar", "membaca", "menulis"], ans: 1 },
+            { q: "Pelajar itu cuba ___ soalan yang ditanya oleh guru.", opts: ["menjawab", "menanya", "bercakap", "mendengar"], ans: 0 },
+            { q: "Dia ___ tangan dengan sabun sebelum makan.", opts: ["mengelap", "mencuci", "memotong", "melukis"], ans: 1 },
+            { q: "Siti ___ lantai yang kotor di ruang tamu.", opts: ["menyapu", "mencuci", "membuang", "menarik"], ans: 0 },
+            
+            // --- BAHAGIAN B: BINA AYAT (31-60) ---
+            { word: "Sekolah" }, { word: "Kawan" }, { word: "Keluarga" }, { word: "Hobi" }, { word: "Melawat" },
+            { word: "Komputer" }, { word: "Menolong" }, { word: "Cuti" }, { word: "Basikal" }, { word: "Hospital" },
+            { word: "Doktor" }, { word: "Polis" }, { word: "Sayur-sayuran" }, { word: "Buah-buahan" }, { word: "Bersenam" },
+            { word: "Kesihatan" }, { word: "Kampung" }, { word: "Bandar" }, { word: "Cuaca" }, { word: "Hujan" },
+            { word: "Membeli-belah" }, { word: "Pasar raya" }, { word: "Wang" }, { word: "Restoran" }, { word: "Melancong" },
+            { word: "Beg" }, { word: "Peperiksaan" }, { word: "Belajar" }, { word: "Telefon bimbit" }, { word: "Internet" }
+        ];
+
+        let currentIndex = 0;
+        let combo = 0;
+        let studentName = "";
+        let isAdmin = false;
+
+        const elNameOverlay = document.getElementById('name-overlay');
+        const elNameInput = document.getElementById('student-name-input');
+        const elBtnStart = document.getElementById('btn-start');
+        const elDisplayName = document.getElementById('display-student-name');
+        const elFinishName = document.getElementById('finish-student-name');
+        const elAdminTrigger = document.getElementById('admin-trigger');
+        const elBtnAdminBypass = document.getElementById('btn-admin-bypass');
+
+        // Admin Modal Elements
+        const elAdminModal = document.getElementById('admin-modal');
+        const elAdminPwdInput = document.getElementById('admin-pwd-input');
+        const elBtnAdminSubmit = document.getElementById('btn-admin-submit');
+        const elBtnAdminCancel = document.getElementById('btn-admin-cancel');
+        const elAdminError = document.getElementById('admin-error');
+
+        const elQuestionText = document.getElementById('question-text');
+        const elOptionsArea = document.getElementById('options-area');
+        const elCorrectionArea = document.getElementById('correction-area');
+        const elCorrectionInput = document.getElementById('correction-input');
+        const elCorrectAnswerText = document.getElementById('correct-answer-text');
+        const elTypingArea = document.getElementById('typing-area');
+        const elAnswerInput = document.getElementById('answer-input');
+        const elBtnNext = document.getElementById('btn-next');
+        const elProgressBar = document.getElementById('progress-bar');
+        const elQuestionCounter = document.getElementById('question-counter');
+        const elSectionTitle = document.getElementById('section-title');
+        const elComboCounter = document.getElementById('combo-counter');
+
+        // Logic Modal Nama
+        elNameInput.addEventListener('input', () => {
+            if (elNameInput.value.trim().length >= 3) {
+                elBtnStart.disabled = false;
+                elBtnStart.classList.remove('opacity-50', 'cursor-not-allowed');
+                elBtnStart.classList.add('hover:bg-blue-700', 'shadow-md');
+            } else {
+                elBtnStart.disabled = true;
+                elBtnStart.classList.add('opacity-50', 'cursor-not-allowed');
+                elBtnStart.classList.remove('hover:bg-blue-700', 'shadow-md');
+            }
+        });
+
+        // Fungsi Trigger Admin (Custom Modal)
+        function showAdminModal() {
+            if (isAdmin) return; // elak prompt dua kali kalau dah login
+            elAdminModal.classList.remove('hidden');
+            elAdminPwdInput.value = '';
+            elAdminError.classList.add('hidden');
+            setTimeout(() => elAdminPwdInput.focus(), 100);
+        }
+
+        function closeAdminModal() {
+            elAdminModal.classList.add('hidden');
+        }
+
+        function verifyAdmin() {
+            if(elAdminPwdInput.value === "4321") {
+                isAdmin = true;
+                closeAdminModal();
+                // Tukar icon mangga jadi mangga terbuka warna ungu tanda berjaya
+                elAdminTrigger.innerText = '🔓';
+                elAdminTrigger.classList.remove('opacity-40');
+                elAdminTrigger.classList.add('opacity-100', 'text-purple-600');
+            } else {
+                elAdminError.classList.remove('hidden');
+                elAdminPwdInput.value = '';
+                elAdminPwdInput.focus();
+            }
+        }
+
+        // Trigger Super Admin (Klik)
+        elAdminTrigger.addEventListener('click', showAdminModal);
+
+        // Trigger Super Admin (Keyboard Shortcut: Ctrl + Shift + A)
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+                showAdminModal();
+            }
+        });
+
+        // Modal Events
+        elBtnAdminCancel.addEventListener('click', closeAdminModal);
+        elBtnAdminSubmit.addEventListener('click', verifyAdmin);
+        elAdminPwdInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') verifyAdmin();
+        });
+
+        elBtnStart.addEventListener('click', () => {
+            studentName = elNameInput.value.trim().toUpperCase();
+            if (isAdmin && !studentName.includes("[ADMIN]")) {
+                studentName = "[ADMIN] " + studentName; // Tag sikit kat nama untuk GAS
+            }
+            
+            elDisplayName.innerText = studentName;
+            elFinishName.innerText = studentName;
+            elNameOverlay.classList.add('hidden');
+            
+            // Hantar data ke GAS (Status: Sedang Menjawab)
+            sendDataToSheets(studentName, "Sedang Menjawab...");
+            loadQuestion();
+        });
+
+        function sendDataToSheets(nama, status) {
+            if (!SCRIPT_URL) return; 
+            
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nama: nama, status: status })
+            }).catch(err => console.log('Error logging:', err));
+        }
+
+        function loadQuestion() {
+            if (currentIndex >= questions.length) {
+                document.getElementById('question-area').classList.add('hidden');
+                document.getElementById('completion-area').classList.remove('hidden');
+                sendDataToSheets(studentName, "Selesai Sempurna");
+                return;
+            }
+
+            const qData = questions[currentIndex];
+            const isTatabahasa = currentIndex < 30;
+
+            // Tunjuk butang Bypass kalau Super Admin
+            if (isAdmin) {
+                elBtnAdminBypass.classList.remove('hidden');
+            }
+
+            // Reset UI
+            elCorrectionArea.classList.add('hidden');
+            elCorrectionInput.value = '';
+
+            // Update Header info
+            elSectionTitle.innerText = isTatabahasa ? "Bahagian A: Tatabahasa" : "Bahagian B: Bina Ayat";
+            elQuestionCounter.innerText = `Soalan ${currentIndex + 1} / 60`;
+            elProgressBar.style.width = `${((currentIndex) / 60) * 100}%`;
+
+            elQuestionText.classList.remove('fade-in');
+            void elQuestionText.offsetWidth; 
+            elQuestionText.classList.add('fade-in');
+
+            if (isTatabahasa) {
+                // Render Tatabahasa
+                elQuestionText.innerHTML = qData.q.replace('___', '<span class="text-blue-600 font-bold border-b-2 border-blue-600 px-2">___</span>');
+                elTypingArea.classList.add('hidden');
+                elOptionsArea.classList.remove('hidden');
+                elOptionsArea.innerHTML = '';
+
+                qData.opts.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-option w-full border-2 border-gray-200 rounded-xl py-4 px-6 text-left text-lg font-medium text-gray-700 bg-white hover:border-blue-500';
+                    btn.innerText = opt;
+                    btn.onclick = () => checkAnswer(idx, qData.ans, btn, qData.opts[qData.ans]);
+                    elOptionsArea.appendChild(btn);
+                });
+            } else {
+                // Render Bina Ayat
+                elQuestionText.innerHTML = `<span class="text-gray-500 text-lg font-normal block mb-2">Bina satu ayat menggunakan perkataan:</span> <span class="text-blue-600 text-4xl">"${qData.word}"</span>`;
+                elOptionsArea.classList.add('hidden');
+                elTypingArea.classList.remove('hidden');
+                elAnswerInput.value = '';
+                checkTyping();
+                elAnswerInput.focus();
+            }
+        }
+
+        // Fungsi Admin Bypass
+        elBtnAdminBypass.addEventListener('click', () => {
+            if (!isAdmin) return;
+            combo = 0;
+            elComboCounter.classList.add('hidden');
+            currentIndex++;
+            loadQuestion();
+        });
+
+        // Semak Tatabahasa
+        function checkAnswer(selectedIdx, correctIdx, btnEl, correctString) {
+            const allBtns = elOptionsArea.querySelectorAll('button');
+            allBtns.forEach(b => b.disabled = true); 
+
+            if (selectedIdx === correctIdx) {
+                btnEl.classList.add('correct');
+                combo++;
+                if(combo > 2) {
+                    elComboCounter.innerText = `🔥 ${combo} Berturut-turut!`;
+                    elComboCounter.classList.remove('hidden');
+                }
+                setTimeout(() => {
+                    currentIndex++;
+                    loadQuestion();
+                }, 800);
+            } else {
+                // SALAH -> Paksa taip jawapan
+                btnEl.classList.add('wrong');
+                combo = 0;
+                elComboCounter.classList.add('hidden');
+                
+                setTimeout(() => {
+                    elOptionsArea.classList.add('hidden');
+                    elCorrectionArea.classList.remove('hidden');
+                    elCorrectAnswerText.innerText = correctString;
+                    elCorrectionInput.focus();
+                    
+                    // Event Listener untuk paksa taip betul-betul
+                    elCorrectionInput.oninput = () => {
+                        if(elCorrectionInput.value.trim().toLowerCase() === correctString.toLowerCase()) {
+                            elCorrectionInput.classList.add('border-green-500', 'bg-green-50');
+                            setTimeout(() => {
+                                currentIndex++;
+                                loadQuestion();
+                            }, 500);
+                        }
+                    };
+                }, 800);
+            }
+        }
+
+        // Semak Bina Ayat (Minimum 3 patah)
+        function checkTyping() {
+            const text = elAnswerInput.value.trim();
+            const wordCount = text === "" ? 0 : text.split(/\s+/).length;
+            
+            if (wordCount >= 3) {
+                elBtnNext.disabled = false;
+                elBtnNext.classList.remove('opacity-50', 'cursor-not-allowed');
+                elBtnNext.classList.add('hover:bg-blue-700', 'shadow-md');
+            } else {
+                elBtnNext.disabled = true;
+                elBtnNext.classList.add('opacity-50', 'cursor-not-allowed');
+                elBtnNext.classList.remove('hover:bg-blue-700', 'shadow-md');
+            }
+        }
+
+        elAnswerInput.addEventListener('input', checkTyping);
+        
+        elBtnNext.addEventListener('click', () => {
+            if(!elBtnNext.disabled) {
+                currentIndex++;
+                loadQuestion();
+            }
+        });
+    </script>
+</body>
+</html>
